@@ -10,6 +10,7 @@ touch /shared/.lock
 
 # Счетчик операций
 COUNTER=0
+CURRENT_FILE=""
 
 # Функция для безопасного завершения
 cleanup() {
@@ -31,17 +32,15 @@ do
         flock -x 200
         
         # Ищем первое свободное имя файла
-        LAST_FILE=$(ls -1 /shared/[0-9][0-9][0-9] 2>/dev/null | sort -n | tail -n 1)
-        if [ -z "$LAST_FILE" ]; then
-            # Если файлов нет, начинаем с 001
-            i="001"
-        else
-            # Берем следующий номер после последнего существующего
-            i=$(printf "%03d" $((10#${LAST_FILE##*/} + 1)))
-        fi
-        
-        echo "$CONTAINER_ID:$COUNTER" > "/shared/$i"
-        echo "[$CONTAINER_ID] Создал файл $i (операция $COUNTER)"
+        for i in $(seq -f "%03g" 1 999)
+        do
+            if [ ! -f "/shared/$i" ]; then
+                echo "$CONTAINER_ID:$COUNTER" > "/shared/$i"
+                CURRENT_FILE="/shared/$i"
+                echo "[$CONTAINER_ID] Создал файл $i (операция $COUNTER)"
+                break
+            fi
+        done
     ) 200>/shared/.lock
     
     # Пауза ровно 1 секунда между операциями
@@ -52,15 +51,10 @@ do
         # Получаем блокировку
         flock -x 200
         
-        # Ищем свой файл для удаления
-        for file in /shared/[0-9][0-9][0-9]
-        do
-            if [ -f "$file" ] && grep -q "^$CONTAINER_ID:" "$file" 2>/dev/null; then
-                echo "[$CONTAINER_ID] Удаляю файл $file"
-                rm "$file"
-                break
-            fi
-        done
+        if [ -f "$CURRENT_FILE" ]; then
+            echo "[$CONTAINER_ID] Удаляю файл $CURRENT_FILE"
+            rm "$CURRENT_FILE"
+        fi
     ) 200>/shared/.lock
     
     # Пауза ровно 1 секунда между операциями
