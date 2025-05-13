@@ -94,6 +94,9 @@ private:
     // Вспомогательные переменные для сортировки слиянием
     QVector<QVector<int>> mergeSortRuns;
     int currentMergeStep;
+    
+    // Метод для завершения сортировки
+    void finishSorting();
 };
 
 #endif 

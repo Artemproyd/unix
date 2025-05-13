@@ -239,7 +239,7 @@ void MainWindow::highlightBars(int i, int j, QColor color)
     
     // Выделяем нужные столбцы
     QPen highlightPen(color.darker());
-    highlightPen.setWidth(3); // Еще более толстая рамка для выделенных элементов
+    highlightPen.setWidth(3);
     
     if (i >= 0 && i < bars.size()) {
         bars[i]->setBrush(QBrush(color));
@@ -288,11 +288,9 @@ void MainWindow::swapBars(int i, int j)
     double barWidth = static_cast<double>(scene->width()) / visibleElements * 0.8;
     double spacing = static_cast<double>(scene->width()) / visibleElements * 0.2;
     
-    // Обновляем высоту столбцов
     double height1 = array[i] * scale;
     double height2 = array[j] * scale;
     
-    // Используем толстую рамку
     QPen thickPen(Qt::black);
     thickPen.setWidth(2);
     
@@ -461,7 +459,7 @@ void MainWindow::bubbleSortStep()
 {
     if (i < arraySize - 1) {
         if (j < arraySize - i - 1) {
-            // Выделяем сравниваемые элементы с правильными параметрами
+            // Выделяем сравниваемые элементы
             highlightBars(j, j + 1, Qt::yellow);
             
             // Сравниваем и меняем местами, если нужно
@@ -470,30 +468,14 @@ void MainWindow::bubbleSortStep()
                 swapBars(j, j + 1);
             }
             
-            // Переходим к следующей паре
             j++;
         } else {
-            // Переходим к следующему проходу
             j = 0;
             i++;
-            
-            // Обновляем отображение после каждого прохода
             updateArray();
         }
     } else {
-        // Сортировка завершена
-        sorting = false;
-        startButton->setText("Старт");
-        timer->stop();
-        
-        // Выделяем все столбцы зеленым, показывая завершение
-        QPen thickPen(Qt::black);
-        thickPen.setWidth(2);
-        
-        for (auto bar : bars) {
-            bar->setBrush(QBrush(Qt::green));
-            bar->setPen(thickPen);
-        }
+        finishSorting(); // Используем общий метод
     }
 }
 
@@ -501,9 +483,8 @@ void MainWindow::selectionSortStep()
 {
     if (i < arraySize - 1) {
         if (j == i) {
-            // Начинаем новый проход, ищем минимальный элемент
             j = i + 1;
-            currentStep = i; // Индекс текущего минимума
+            currentStep = i;
             highlightBars(currentStep, -1, Qt::yellow);
             operations++;
         } else if (j < arraySize) {
@@ -527,15 +508,7 @@ void MainWindow::selectionSortStep()
             j = i;
         }
     } else {
-        // Сортировка завершена
-        sorting = false;
-        startButton->setText("Старт");
-        timer->stop();
-        
-        // Выделяем все столбцы зеленым, показывая завершение
-        for (auto bar : bars) {
-            bar->setBrush(QBrush(Qt::green));
-        }
+        finishSorting(); // Используем общий метод
     }
 }
 
@@ -543,29 +516,18 @@ void MainWindow::insertionSortStep()
 {
     if (i < arraySize) {
         if (i == 0) {
-            // Первый элемент уже отсортирован
             i++;
             j = i;
         } else if (j > 0 && array[j - 1] > array[j]) {
-            // Сдвигаем элемент влево, пока не найдем правильную позицию
             highlightBars(j, j - 1, Qt::green);
             swapBars(j, j - 1);
             j--;
         } else {
-            // Переходим к следующему элементу
             i++;
             j = i;
         }
     } else {
-        // Сортировка завершена
-        sorting = false;
-        startButton->setText("Старт");
-        timer->stop();
-        
-        // Выделяем все столбцы зеленым, показывая завершение
-        for (auto bar : bars) {
-            bar->setBrush(QBrush(Qt::green));
-        }
+        finishSorting(); // Используем общий метод
     }
 }
 
@@ -611,30 +573,14 @@ void MainWindow::quickSortStep()
             quickSortStack.append(high);
         }
     } else {
-        // Сортировка завершена
-        sorting = false;
-        startButton->setText("Старт");
-        timer->stop();
-        
-        // Выделяем все столбцы зеленым, показывая завершение
-        for (auto bar : bars) {
-            bar->setBrush(QBrush(Qt::green));
-        }
+        finishSorting(); // Используем общий метод
     }
 }
 
 void MainWindow::mergeSortStep()
 {
-    // Если остался только один подмассив, сортировка завершена
     if (mergeSortRuns.size() == 1 && mergeSortRuns[0].size() == arraySize) {
-        sorting = false;
-        startButton->setText("Старт");
-        timer->stop();
-        
-        // Выделяем все столбцы зеленым, показывая завершение
-        for (auto bar : bars) {
-            bar->setBrush(QBrush(Qt::green));
-        }
+        finishSorting(); // Используем общий метод
         return;
     }
     
@@ -687,5 +633,22 @@ void MainWindow::mergeSortStep()
                 bars[k]->setBrush(QBrush(Qt::green));
             }
         }
+    }
+}
+
+void MainWindow::finishSorting()
+{
+    // Сортировка завершена
+    sorting = false;
+    startButton->setText("Старт");
+    timer->stop();
+    
+    // Выделяем все столбцы зеленым, показывая завершение
+    QPen thickPen(Qt::black);
+    thickPen.setWidth(2);
+    
+    for (auto bar : bars) {
+        bar->setBrush(QBrush(Qt::green));
+        bar->setPen(thickPen);
     }
 } 
