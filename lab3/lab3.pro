@@ -4,6 +4,9 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++11
 
+# Включаем все предупреждения и обрабатываем их как ошибки
+QMAKE_CXXFLAGS += -Wall -Wextra -Werror
+
 SOURCES += \
     main.cpp \
     mainwindow.cpp
