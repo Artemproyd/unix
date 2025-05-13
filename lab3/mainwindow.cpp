@@ -25,9 +25,13 @@ MainWindow::MainWindow(QWidget *parent)
     sortingSpeed = 50;
     currentAlgorithm = BUBBLE_SORT;
     
-    // Генерация начального массива
-    generateRandomArray();
-    drawArray();
+    // Устанавливаем начальный размер окна, достаточный для 100 элементов
+    resize(1200, 700);
+    
+    // Вместо прямого вызова generateRandomArray и drawArray
+    // используем метод resetArray, который делает то же самое,
+    // но с правильной инициализацией всех параметров
+    QTimer::singleShot(100, this, &MainWindow::resetArray);
 }
 
 MainWindow::~MainWindow()
@@ -60,10 +64,10 @@ void MainWindow::setupUi()
     QHBoxLayout *sizeLayout = new QHBoxLayout();
     QLabel *sizeLabel = new QLabel("Размер массива:", this);
     sizeSlider = new QSlider(Qt::Horizontal, this);
-    sizeSlider->setRange(10, 200);
+    sizeSlider->setRange(10, 100); // Ограничиваем до 100 элементов
     sizeSlider->setValue(50);
     sizeSpinBox = new QSpinBox(this);
-    sizeSpinBox->setRange(10, 200);
+    sizeSpinBox->setRange(10, 100); // Ограничиваем до 100 элементов
     sizeSpinBox->setValue(50);
     sizeLayout->addWidget(sizeLabel);
     sizeLayout->addWidget(sizeSlider);
@@ -128,7 +132,7 @@ void MainWindow::setupUi()
     
     // Устанавливаем заголовок окна и размеры
     setWindowTitle("Визуализатор алгоритмов сортировки");
-    resize(800, 600);
+    // Размер устанавливается в конструкторе
     
     // Подключаем сигналы к слотам
     connect(startButton, &QPushButton::clicked, this, &MainWindow::startSorting);
@@ -157,121 +161,84 @@ void MainWindow::drawArray()
     // Определяем размеры сцены
     int sceneWidth = view->width() - 20;
     int sceneHeight = view->height() - 20;
+    
+    // Убедимся, что размеры сцены положительные
+    if (sceneWidth <= 0) sceneWidth = 1180;
+    if (sceneHeight <= 0) sceneHeight = 680;
+    
     scene->setSceneRect(0, 0, sceneWidth, sceneHeight);
     
-    // Ограничиваем максимальное количество отображаемых элементов для лучшей видимости
-    int visibleElements = qMin(arraySize, 50); // Показываем максимум 50 элементов
+    // Фиксированное максимальное значение для масштабирования
+    int maxValue = 100;
+    globalScale = static_cast<double>(sceneHeight - 20) / maxValue;
     
-    // Определяем ширину столбца с небольшим отступом между столбцами
-    double barWidth = static_cast<double>(sceneWidth) / visibleElements * 0.8; // 80% от доступной ширины
-    double spacing = static_cast<double>(sceneWidth) / visibleElements * 0.2; // 20% для отступа
+    // Определяем ширину столбца с отступом между столбцами
+    double barWidth = static_cast<double>(sceneWidth) / arraySize * 0.8;
+    double spacing = static_cast<double>(sceneWidth) / arraySize * 0.2;
     
-    // Находим максимальное значение для масштабирования
-    int maxValue = *std::max_element(array.begin(), array.end());
-    double scale = static_cast<double>(sceneHeight) / maxValue;
-    
-    // Создаем столбцы с толстыми рамками
+    // Создаем столбцы
     QPen thickPen(Qt::black);
-    thickPen.setWidth(2); // Толщина рамки
+    thickPen.setWidth(2);
     
     for (int i = 0; i < arraySize; ++i) {
-        double height = array[i] * scale;
+        double height = array[i] * globalScale;
         QGraphicsRectItem *bar = scene->addRect(
-            i * (barWidth + spacing), // Добавляем отступ между столбцами
+            i * (barWidth + spacing),
             sceneHeight - height, 
             barWidth, 
             height, 
-            thickPen, // Используем толстую рамку
+            thickPen,
             QBrush(Qt::blue)
         );
         bars.append(bar);
     }
+    
+    // Обновляем текстовое представление
+    updateArrayText();
 }
 
 void MainWindow::updateArray()
 {
-    // Обновляем высоту столбцов
+    // Определяем размеры сцены
+    int sceneWidth = view->width() - 20;
     int sceneHeight = view->height() - 20;
-    int maxValue = *std::max_element(array.begin(), array.end());
-    double scale = static_cast<double>(sceneHeight) / maxValue;
     
-    int visibleElements = qMin(arraySize, 50);
-    double barWidth = static_cast<double>(scene->width()) / visibleElements * 0.8;
-    double spacing = static_cast<double>(scene->width()) / visibleElements * 0.2;
+    // Определяем ширину столбца и отступ
+    double barWidth = static_cast<double>(sceneWidth) / arraySize * 0.8;
+    double spacing = static_cast<double>(sceneWidth) / arraySize * 0.2;
     
+    // Используем глобальный масштаб
     for (int i = 0; i < arraySize && i < bars.size(); ++i) {
-        double height = array[i] * scale;
+        double height = array[i] * globalScale;
         bars[i]->setRect(
             i * (barWidth + spacing),
             sceneHeight - height,
             barWidth,
             height
         );
+        bars[i]->setBrush(QBrush(Qt::blue));
     }
     
-    // Обновляем текстовое представление массива
-    QString arrayText = "Массив: [ ";
-    for (int i = 0; i < arraySize; ++i) {
-        arrayText += QString::number(array[i]);
-        if (i < arraySize - 1) {
-            arrayText += ", ";
-        }
-        
-        // Добавляем перенос строки каждые 15 элементов для лучшей читаемости
-        if ((i + 1) % 15 == 0 && i < arraySize - 1) {
-            arrayText += "\n";
-        }
-    }
-    arrayText += " ]";
-    arrayLabel->setText(arrayText);
+    // Обновляем текстовое представление
+    updateArrayText();
 }
 
 void MainWindow::highlightBars(int i, int j, QColor color)
 {
-    // Сбрасываем цвет всех столбцов
-    QPen thickPen(Qt::black);
-    thickPen.setWidth(2);
-    
+    // Сначала сбрасываем все столбцы на синий цвет
     for (auto bar : bars) {
         bar->setBrush(QBrush(Qt::blue));
-        bar->setPen(thickPen);
     }
     
-    // Выделяем нужные столбцы
-    QPen highlightPen(color.darker());
-    highlightPen.setWidth(3);
-    
+    // Выделяем первый столбец
     if (i >= 0 && i < bars.size()) {
         bars[i]->setBrush(QBrush(color));
-        bars[i]->setPen(highlightPen);
     }
     
+    // Выделяем второй столбец, если указан
     if (j >= 0 && j < bars.size()) {
         bars[j]->setBrush(QBrush(color));
-        bars[j]->setPen(highlightPen);
     }
-    
-    // Обновляем текстовое представление
-    QString arrayText = "Массив: [ ";
-    for (int k = 0; k < arraySize; ++k) {
-        arrayText += QString::number(array[k]);
-        if (k < arraySize - 1) {
-            arrayText += ", ";
-        }
-        
-        // Добавляем перенос строки каждые 15 элементов для лучшей читаемости
-        if ((k + 1) % 15 == 0 && k < arraySize - 1) {
-            arrayText += "\n";
-        }
-    }
-    arrayText += " ]";
-    
-    // Добавляем информацию о сравниваемых элементах
-    if (i >= 0 && j >= 0 && i < arraySize && j < arraySize) {
-        arrayText += "\nСравниваем элементы: " + QString::number(array[i]) + " и " + QString::number(array[j]);
-    }
-    
-    arrayLabel->setText(arrayText);
 }
 
 void MainWindow::swapBars(int i, int j)
@@ -280,27 +247,24 @@ void MainWindow::swapBars(int i, int j)
     std::swap(array[i], array[j]);
     
     // Обновляем отображение
+    int sceneWidth = view->width() - 20;
     int sceneHeight = view->height() - 20;
-    int maxValue = *std::max_element(array.begin(), array.end());
-    double scale = static_cast<double>(sceneHeight) / maxValue;
     
-    int visibleElements = qMin(arraySize, 50);
-    double barWidth = static_cast<double>(scene->width()) / visibleElements * 0.8;
-    double spacing = static_cast<double>(scene->width()) / visibleElements * 0.2;
+    // Определяем ширину столбца и отступ
+    double barWidth = static_cast<double>(sceneWidth) / arraySize * 0.8;
+    double spacing = static_cast<double>(sceneWidth) / arraySize * 0.2;
     
-    double height1 = array[i] * scale;
-    double height2 = array[j] * scale;
+    // Используем глобальный масштаб
+    double height1 = array[i] * globalScale;
+    double height2 = array[j] * globalScale;
     
-    QPen thickPen(Qt::black);
-    thickPen.setWidth(2);
-    
+    // Обновляем столбцы
     bars[i]->setRect(
         i * (barWidth + spacing),
         sceneHeight - height1,
         barWidth,
         height1
     );
-    bars[i]->setPen(thickPen);
     
     bars[j]->setRect(
         j * (barWidth + spacing),
@@ -308,13 +272,18 @@ void MainWindow::swapBars(int i, int j)
         barWidth,
         height2
     );
-    bars[j]->setPen(thickPen);
     
     // Выделяем обмененные элементы
     bars[i]->setBrush(QBrush(Qt::red));
     bars[j]->setBrush(QBrush(Qt::red));
     
     // Обновляем текстовое представление
+    updateArrayText();
+}
+
+void MainWindow::updateArrayText()
+{
+    // Создаем текстовое представление массива
     QString arrayText = "Массив: [ ";
     for (int k = 0; k < arraySize; ++k) {
         arrayText += QString::number(array[k]);
@@ -328,71 +297,91 @@ void MainWindow::swapBars(int i, int j)
         }
     }
     arrayText += " ]";
-    arrayText += "\nПоменяли местами: " + QString::number(array[i]) + " и " + QString::number(array[j]);
+    
+    // Устанавливаем фиксированную высоту для метки
+    if (arrayLabel->minimumHeight() < 50) {
+        // Определяем высоту в зависимости от количества строк
+        int lines = 1 + (arraySize / 15);
+        int height = lines * 20 + 10; // 20 пикселей на строку + отступ
+        arrayLabel->setMinimumHeight(height);
+        arrayLabel->setMaximumHeight(height);
+    }
+    
     arrayLabel->setText(arrayText);
 }
 
 void MainWindow::startSorting()
 {
-    if (!sorting) {
+    if (sorting) {
+        // Если сортировка уже идет, останавливаем ее
+        sorting = false;
+        startButton->setText("Старт");
+        timer->stop();
+        
+        // Разблокируем элементы управления
+        sizeSlider->setEnabled(true);
+        sizeSpinBox->setEnabled(true);
+        algorithmComboBox->setEnabled(true);
+    } else {
         // Начинаем сортировку
         sorting = true;
-        startButton->setText("Пауза");
+        startButton->setText("Стоп");
+        
+        // Блокируем элементы управления
+        sizeSlider->setEnabled(false);
+        sizeSpinBox->setEnabled(false);
+        algorithmComboBox->setEnabled(false);
         
         // Сбрасываем счетчики
         operations = 0;
-        currentStep = 0;
+        operationsLabel->setText("Операции: 0");
         
-        // Инициализируем индексы для алгоритмов
+        // Инициализируем переменные для алгоритмов
         i = 0;
         j = 0;
         
-        // Инициализация для быстрой сортировки
+        // Инициализируем структуры данных для быстрой сортировки и сортировки слиянием
         if (currentAlgorithm == QUICK_SORT) {
             quickSortStack.clear();
             quickSortStack.append(0);
             quickSortStack.append(arraySize - 1);
-        }
-        
-        // Инициализация для сортировки слиянием
-        if (currentAlgorithm == MERGE_SORT) {
+        } else if (currentAlgorithm == MERGE_SORT) {
             mergeSortRuns.clear();
-            for (int i = 0; i < arraySize; ++i) {
+            // Создаем начальные подмассивы размером 1
+            for (int i = 0; i < arraySize; i++) {
                 QVector<int> run;
                 run.append(array[i]);
                 mergeSortRuns.append(run);
             }
-            currentMergeStep = 0;
         }
         
         // Запускаем таймер
-        timer->setInterval(1000 / sortingSpeed);
-        timer->start();
-    } else {
-        // Приостанавливаем сортировку
-        sorting = false;
-        startButton->setText("Продолжить");
-        timer->stop();
+        timer->start(1000 / sortingSpeed);
     }
 }
 
 void MainWindow::resetArray()
 {
-    // Останавливаем сортировку, если она запущена
+    // Останавливаем сортировку, если она идет
     if (sorting) {
         sorting = false;
         startButton->setText("Старт");
         timer->stop();
     }
     
-    // Генерируем новый массив
-    generateRandomArray();
-    drawArray();
+    // Разблокируем элементы управления
+    sizeSlider->setEnabled(true);
+    sizeSpinBox->setEnabled(true);
+    algorithmComboBox->setEnabled(true);
     
     // Сбрасываем счетчики
     operations = 0;
     operationsLabel->setText("Операции: 0");
     timeLabel->setText("Время: 0 мс");
+    
+    // Генерируем новый массив и отображаем его
+    generateRandomArray();
+    drawArray();
 }
 
 void MainWindow::updateArraySize(int size)
@@ -432,27 +421,34 @@ void MainWindow::algorithmChanged(int index)
 
 void MainWindow::sortingStep()
 {
+    if (!sorting) return;
+    
     // Выполняем шаг сортировки в зависимости от выбранного алгоритма
     switch (currentAlgorithm) {
-        case BUBBLE_SORT:
-            bubbleSortStep();
-            break;
-        case SELECTION_SORT:
-            selectionSortStep();
-            break;
-        case INSERTION_SORT:
-            insertionSortStep();
-            break;
-        case QUICK_SORT:
-            quickSortStep();
-            break;
-        case MERGE_SORT:
-            mergeSortStep();
-            break;
+    case BUBBLE_SORT:
+        bubbleSortStep();
+        break;
+    case SELECTION_SORT:
+        selectionSortStep();
+        break;
+    case INSERTION_SORT:
+        insertionSortStep();
+        break;
+    case QUICK_SORT:
+        quickSortStep();
+        break;
+    case MERGE_SORT:
+        mergeSortStep();
+        break;
     }
     
-    // Обновляем статистику
+    // Обновляем счетчик операций
     operationsLabel->setText("Операции: " + QString::number(operations));
+    
+    // Полностью перерисовываем массив после каждого шага
+    if (sorting) {
+        drawArray();
+    }
 }
 
 void MainWindow::bubbleSortStep()
@@ -643,6 +639,11 @@ void MainWindow::finishSorting()
     startButton->setText("Старт");
     timer->stop();
     
+    // Разблокируем элементы управления
+    sizeSlider->setEnabled(true);
+    sizeSpinBox->setEnabled(true);
+    algorithmComboBox->setEnabled(true);
+    
     // Выделяем все столбцы зеленым, показывая завершение
     QPen thickPen(Qt::black);
     thickPen.setWidth(2);
@@ -651,4 +652,15 @@ void MainWindow::finishSorting()
         bar->setBrush(QBrush(Qt::green));
         bar->setPen(thickPen);
     }
-} 
+}
+
+void MainWindow::resizeEvent(QResizeEvent *event)
+{
+    QMainWindow::resizeEvent(event);
+    
+    // Перерисовываем массив при изменении размера окна
+    if (!bars.isEmpty()) {
+        drawArray();
+    }
+}
+

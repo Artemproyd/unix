@@ -97,6 +97,15 @@ private:
     
     // Метод для завершения сортировки
     void finishSorting();
+
+    // Метод для обновления текстового представления массива
+    void updateArrayText();
+
+    double globalScale; // Глобальный масштаб для всех методов
+
+protected:
+    // Обработчик изменения размера окна
+    void resizeEvent(QResizeEvent *event) override;
 };
 
 #endif 
