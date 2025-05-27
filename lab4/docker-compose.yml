@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - url-analyzer-network
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    ports:
+      - "5000:5000"
+    depends_on:
+      - redis
+    networks:
+      - url-analyzer-network
+    environment:
+      - FLASK_ENV=development
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    depends_on:
+      - redis
+    networks:
+      - url-analyzer-network
+    scale: 3
+
+networks:
+  url-analyzer-network:
+    driver: bridge 
