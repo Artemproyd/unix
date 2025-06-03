@@ -1,20 +1,13 @@
-.PHONY: build up down scale logs clean
+.PHONY: build run test clean
 
 build:
 	docker-compose build
 
-up:
-	docker-compose up -d
+run:
+	docker-compose up -d --scale worker=3
 
-down:
-	docker-compose down
-
-scale:
-	docker-compose up -d --scale worker=5
-
-logs:
-	docker-compose logs -f
+test:
+	python text_client.py
 
 clean:
-	docker-compose down -v
-	docker system prune -f 
+	docker-compose down -v 

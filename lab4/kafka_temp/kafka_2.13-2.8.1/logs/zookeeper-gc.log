@@ -1,0 +1,23 @@
+[2025-06-03T17:41:30.931+0700][gc,heap] Heap region size: 1M
+[2025-06-03T17:41:30.937+0700][gc     ] Using G1
+[2025-06-03T17:41:30.937+0700][gc,heap,coops] Heap address: 0x00000000e0000000, size: 512 MB, Compressed Oops mode: 32-bit
+[2025-06-03T17:41:30.937+0700][gc,cds       ] Mark closed archive regions in map: [0x00000000fff00000, 0x00000000fff6bff8]
+[2025-06-03T17:41:30.937+0700][gc,cds       ] Mark open archive regions in map: [0x00000000ffe00000, 0x00000000ffe47ff8]
+[2025-06-03T17:41:36.348+0700][gc,start     ] GC(0) Pause Young (Normal) (G1 Evacuation Pause)
+[2025-06-03T17:41:36.348+0700][gc,task      ] GC(0) Using 10 workers of 10 for evacuation
+[2025-06-03T17:41:36.352+0700][gc,phases    ] GC(0)   Pre Evacuate Collection Set: 0,0ms
+[2025-06-03T17:41:36.352+0700][gc,phases    ] GC(0)   Evacuate Collection Set: 3,4ms
+[2025-06-03T17:41:36.352+0700][gc,phases    ] GC(0)   Post Evacuate Collection Set: 0,2ms
+[2025-06-03T17:41:36.352+0700][gc,phases    ] GC(0)   Other: 0,7ms
+[2025-06-03T17:41:36.352+0700][gc,heap      ] GC(0) Eden regions: 25->0(21)
+[2025-06-03T17:41:36.352+0700][gc,heap      ] GC(0) Survivor regions: 0->4(4)
+[2025-06-03T17:41:36.352+0700][gc,heap      ] GC(0) Old regions: 2->4
+[2025-06-03T17:41:36.352+0700][gc,heap      ] GC(0) Humongous regions: 0->0
+[2025-06-03T17:41:36.352+0700][gc,metaspace ] GC(0) Metaspace: 7834K(8192K)->7834K(8192K) NonClass: 6948K(7168K)->6948K(7168K) Class: 886K(1024K)->886K(1024K)
+[2025-06-03T17:41:36.352+0700][gc           ] GC(0) Pause Young (Normal) (G1 Evacuation Pause) 25M->6M(512M) 4,287ms
+[2025-06-03T17:41:36.352+0700][gc,cpu       ] GC(0) User=0,03s Sys=0,01s Real=0,00s
+[2025-06-03T18:03:29.990+0700][gc,heap,exit ] Heap
+[2025-06-03T18:03:29.990+0700][gc,heap,exit ]  garbage-first heap   total 524288K, used 11599K [0x00000000e0000000, 0x0000000100000000)
+[2025-06-03T18:03:29.990+0700][gc,heap,exit ]   region size 1024K, 10 young (10240K), 4 survivors (4096K)
+[2025-06-03T18:03:29.990+0700][gc,heap,exit ]  Metaspace       used 8309K, capacity 8589K, committed 8704K, reserved 1056768K
+[2025-06-03T18:03:29.990+0700][gc,heap,exit ]   class space    used 904K, capacity 1014K, committed 1024K, reserved 1048576K
