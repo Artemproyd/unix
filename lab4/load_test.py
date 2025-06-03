@@ -28,13 +28,13 @@ def send_request(i):
 
 print("🚀 АГРЕССИВНЫЙ нагрузочный тест...")
 
-# Отправляем 50 задач ОЧЕНЬ быстро
+# Отправляем 50 задач 
 threads = []
 for i in range(50):
     t = threading.Thread(target=send_request, args=(i,))
     threads.append(t)
     t.start()
-    time.sleep(0.01)  # ОЧЕНЬ быстро!
+    time.sleep(0.01)  
 
 # Ждем завершения всех потоков
 for t in threads:

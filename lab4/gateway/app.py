@@ -97,7 +97,6 @@ def analyze():
     task_id = str(uuid.uuid4())
     task = {"task_id": task_id, "text": data['text']}
     
-    # ВАЖНО: Создаем ключ для принудительного распределения по партициям
     partition_key = hashlib.md5(task_id.encode()).hexdigest()[:8]
     
     try:
@@ -106,7 +105,7 @@ def analyze():
         producer.flush()
         
         # Ждем результат с увеличенным timeout
-        for _ in range(100):  # 10 секунд
+        for _ in range(100):  
             if task_id in results:
                 result = results.pop(task_id)
                 logger.info(f"✅ Returning result: {task_id}")

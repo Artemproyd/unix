@@ -5,7 +5,7 @@ import re
 import socket
 import time
 import logging
-import random
+import os
 from collections import Counter
 from kafka import KafkaConsumer, KafkaProducer
 
@@ -30,8 +30,11 @@ def analyze_text(text):
 
 def main():
     worker_id = socket.gethostname()
-    # ВАЖНО: Уникальный group_id для каждого worker'а!
-    unique_group = f"workers-{worker_id}-{random.randint(1000, 9999)}"
+    
+    # ГАРАНТИРОВАННО уникальный group_id без рандомности
+    startup_time = int(time.time() * 1000000)  
+    process_id = os.getpid()
+    unique_group = f"workers-{worker_id}-{process_id}-{startup_time}"
     
     logger.info(f"🔧 Worker {worker_id} starting with group: {unique_group}")
     
@@ -43,7 +46,7 @@ def main():
                 'tasks',
                 bootstrap_servers=['kafka:9092'],
                 value_deserializer=lambda m: json.loads(m.decode('utf-8')),
-                group_id=unique_group,  # УНИКАЛЬНАЯ ГРУППА!
+                group_id=unique_group,
                 auto_offset_reset='latest',
                 enable_auto_commit=True,
                 auto_commit_interval_ms=1000
