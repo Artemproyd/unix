@@ -31,7 +31,6 @@ def analyze_text(text):
 def main():
     worker_id = socket.gethostname()
     
-    # ГАРАНТИРОВАННО уникальный group_id без рандомности
     startup_time = int(time.time() * 1000000)  
     process_id = os.getpid()
     unique_group = f"workers-{worker_id}-{process_id}-{startup_time}"
