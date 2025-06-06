@@ -73,101 +73,53 @@ class GracefulWorker:
             "success": True
         }
 
-    def connect_to_kafka(self):
-        """Подключение к Kafka с retry логикой"""
-        startup_time = int(time.time() * 1000000)  
-        process_id = os.getpid()
-        unique_group = f"workers-{self.worker_id}-{process_id}-{startup_time}"
-        
-        logger.info(f"🔧 Worker {self.worker_id} starting with group: {unique_group}")
-        
-        max_attempts = 20
-        for attempt in range(max_attempts):
-            if self.shutdown_requested:
-                logger.info(f"🛑 Worker {self.worker_id} shutdown requested during connection")
-                return False
-                
-            try:
-                # Подключаемся к Kafka с уникальной группой
-                self.consumer = KafkaConsumer(
-                    'tasks',
-                    bootstrap_servers=['kafka:9092'],
-                    value_deserializer=lambda m: json.loads(m.decode('utf-8')),
-                    group_id=unique_group,
-                    auto_offset_reset='latest',
-                    enable_auto_commit=False,  # Отключаем auto commit для контроля
-                    consumer_timeout_ms=5000  # Timeout для проверки shutdown
-                )
-                
-                self.producer = KafkaProducer(
-                    bootstrap_servers=['kafka:9092'],
-                    value_serializer=lambda v: json.dumps(v).encode('utf-8'),
-                    request_timeout_ms=10000,
-                    retry_backoff_ms=1000
-                )
-                
-                logger.info(f"✅ Worker {self.worker_id} connected to Kafka with group {unique_group}")
-                return True
-                
-            except Exception as e:
-                logger.warning(f"❌ Worker {self.worker_id} connection error (attempt {attempt+1}): {e}")
-                time.sleep(5)
-                
-        logger.error(f"❌ Worker {self.worker_id} failed to connect after all attempts")
-        return False
-
-    def process_tasks(self):
-        """Основной цикл обработки задач"""
-        logger.info(f"🚀 Worker {self.worker_id} started processing tasks")
-        
+def main():
+    worker_id = socket.gethostname()
+    
+    # ГАРАНТИРОВАННО уникальный group_id без рандомности
+    startup_time = int(time.time() * 1000000)  
+    process_id = os.getpid()
+    unique_group = f"workers-{worker_id}-{process_id}-{startup_time}"
+    
+    logger.info(f"🔧 Worker {worker_id} starting with group: {unique_group}")
+    
+    max_attempts = 20
+    for attempt in range(max_attempts):
         try:
-            while not self.shutdown_requested:
+            # Подключаемся к Kafka с уникальной группой
+            consumer = KafkaConsumer(
+                'tasks',
+                bootstrap_servers=['kafka:9092'],
+                value_deserializer=lambda m: json.loads(m.decode('utf-8')),
+                group_id=unique_group,
+                auto_offset_reset='latest',
+                enable_auto_commit=True,
+                auto_commit_interval_ms=1000
+            )
+            
+            producer = KafkaProducer(
+                bootstrap_servers=['kafka:9092'],
+                value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+                request_timeout_ms=10000,
+                retry_backoff_ms=1000
+            )
+            
+            logger.info(f"✅ Worker {worker_id} connected to Kafka with group {unique_group}")
+            
+            # Основной цикл обработки
+            for msg in consumer:
                 try:
-                    # Получаем сообщения с timeout для проверки shutdown
-                    message_pack = self.consumer.poll(timeout_ms=1000)
+                    task = msg.value
+                    logger.info(f"📝 Worker {worker_id} processing: {task['text'][:30]}...")
                     
-                    if not message_pack:
-                        continue  # Нет новых сообщений, проверяем shutdown
+                    result = analyze_text(task['text'])
+                    result['task_id'] = task['task_id']
                     
-                    for topic_partition, messages in message_pack.items():
-                        for msg in messages:
-                            if self.shutdown_requested:
-                                logger.info(f"🛑 Worker {self.worker_id} stopping - shutdown requested")
-                                break
-                                
-                            try:
-                                task = msg.value
-                                task_id = task.get('task_id', 'unknown')
-                                
-                                with self.lock:
-                                    self.current_task = task_id
-                                
-                                logger.info(f"📝 Worker {self.worker_id} processing task {task_id}: {task['text'][:30]}...")
-                                
-                                # Обрабатываем задачу
-                                result = self.analyze_text(task['text'])
-                                result['task_id'] = task_id
-                                
-                                # Отправляем результат
-                                self.producer.send('results', result)
-                                self.producer.flush()
-                                
-                                # Подтверждаем обработку сообщения
-                                self.consumer.commit_async()
-                                
-                                logger.info(f"✅ Worker {self.worker_id} completed task {task_id}")
-                                
-                                with self.lock:
-                                    self.current_task = None
-                                    
-                            except Exception as e:
-                                logger.error(f"❌ Worker {self.worker_id} task error: {e}")
-                                # В случае ошибки все равно commit чтобы не обрабатывать снова
-                                self.consumer.commit_async()
-                        
-                        if self.shutdown_requested:
-                            break
-                            
+                    producer.send('results', result)
+                    producer.flush()
+                    
+                    logger.info(f"✅ Worker {worker_id} completed task {task['task_id']}")
+                    
                 except Exception as e:
                     if not self.shutdown_requested:
                         logger.error(f"❌ Worker {self.worker_id} polling error: {e}")
